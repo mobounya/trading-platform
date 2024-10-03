@@ -8,13 +8,19 @@
 
 namespace Bitfinex {
 
-struct Response {
-    unsigned int code;
-    std::string order_id;
+struct OrderResponse {
+    std::string type;
+    unsigned short http_status;
+    unsigned long order_id;
     std::string message;
+    std::string symbol;
+    OrderSide side;
+    double amount;
+    double price;
 };
 
 struct Order {
+    std::string order_id;
     OrderSide side;
     std::string symbol;
     double amount;
@@ -39,7 +45,8 @@ private:
 class Client {
 public:
     explicit Client(Config const& config) : m_config(config) {}
-    void submit_order(Order const&);
+    OrderResponse submit_order(Order const&);
+    OrderResponse update_order(std::string const& order_id, double price);
     void retrieve_orders();
 private:
     const Config m_config;

@@ -4,22 +4,68 @@
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
 #include <string>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace Bitfinex {
 
-void Client::submit_order(Order const& order)
+OrderResponse Client::submit_order(Order const& order)
 {
     const std::string endpoint = "/v2/auth/w/order/submit";
     const std::string current_timestamp = get_current_timestamp_as_string();
+
     // Positive means buy, negative means sell
-    double amount = (order.side == OrderSide::SELL) ? (order.amount * -1) : order.amount;
+    const double amount = (order.side == OrderSide::SELL) ? (order.amount * -1) : order.amount;
 
     const std::string body = std::format(R"({{ "symbol": "{}", "type": "{}", "amount": "{}", "price": "{}" }})", order.symbol, order_type_to_string(order.type), amount, order.price);
     const std::string signature = hex_hmac_sha384(this->m_config.SECRET_KEY, "/api" + endpoint + current_timestamp + body);
     cpr::Response res = cpr::Post(cpr::Url { this->m_config.BASE_ENDPOINT + endpoint }, cpr::Body { body }, cpr::Header { { "Content-type", "application/json" }, {"accept", "application/json"}, { "bfx-nonce", current_timestamp },
+                                    { "bfx-apikey", this->m_config.API_KEY }, { "bfx-signature", signature } });
+
+    OrderResponse order_response;
+    order_response.http_status = res.status_code;
+    if (order_response.http_status != 200)
+        return order_response;
+    json json_response = json::parse(res.text);
+    order_response.message = json_response[6];
+    if (order_response.message != "SUCCESS")
+        return order_response;
+    const double order_amount = json_response[4][0][6];
+    order_response.order_id = json_response[4][0][0];
+    order_response.symbol = json_response[4][0][3];
+    order_response.amount = (order_amount < 0) ? (order_amount * -1) : order_amount;
+    order_response.side = (order_amount < 0) ? OrderSide::SELL : OrderSide::BUY;
+    order_response.type = json_response[4][0][8];
+    order_response.price = json_response[4][0][16];
+    return order_response;
+}
+
+OrderResponse Client::update_order(std::string const& order_id, double price)
+{
+    const std::string endpoint = "/v2/auth/w/order/update";
+    const std::string current_timestamp = get_current_timestamp_as_string();
+    const std::string body = std::format(R"({{ "id": "{}", "price": "{}" }})", order_id, price);
+    const std::string signature = hex_hmac_sha384(this->m_config.SECRET_KEY, "/api" + endpoint + current_timestamp + body);
+    cpr::Response response = cpr::Post(cpr::Url { this->m_config.BASE_ENDPOINT + endpoint }, cpr::Body { body }, cpr::Header { { "Content-type", "application/json" }, {"accept", "application/json"}, { "bfx-nonce", current_timestamp },
                                                                                                         { "bfx-apikey", this->m_config.API_KEY }, { "bfx-signature", signature } });
-    std::cout << res.status_code << std::endl;
-    std::cout << res.text << std::endl;
+
+    OrderResponse order_response;
+    order_response.http_status = response.status_code;
+    if (order_response.http_status != 200)
+        return order_response;
+    json json_response = json::parse(response.text);
+    order_response.message = json_response[6];
+    if (order_response.message != "SUCCESS")
+        return order_response;
+    const double order_amount = json_response[4][0][6];
+    order_response.order_id = json_response[4][0][0];
+    order_response.symbol = json_response[4][0][3];
+    order_response.amount = (order_amount < 0) ? (order_amount * -1) : order_amount;
+    order_response.side = (order_amount < 0) ? OrderSide::SELL : OrderSide::BUY;
+    order_response.type = json_response[4][0][8];
+    order_response.price = json_response[4][0][16];
+    return order_response;
 }
 
 void Client::retrieve_orders()

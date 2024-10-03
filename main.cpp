@@ -1,6 +1,8 @@
 #include <Bitfinex/Client.h>
 #include <Bitfinex/ENUMS.h>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/program_options.hpp>
+#include <format>
 #include <iostream>
 
 class SideValue : public boost::program_options::typed_value<std::string>
@@ -38,6 +40,35 @@ public:
     }
 };
 
+double read_positive_double_from_cli()
+{
+    std::string user_input;
+    while (true) {
+        std::getline(std::cin, user_input);
+        try {
+            auto value = boost::lexical_cast<double>(user_input);
+            if (value <= 0)
+                std::cerr << "Please enter a positive number:" << std::endl;
+            else
+                return value;
+        } catch (const std::exception &ignore) {
+            std::cerr << "Please enter a positive number:" << std::endl;
+        }
+    }
+}
+
+std::string read_string_from_cli(std::vector<std::string> const &allowed_values)
+{
+    std::string user_input;
+    while (true) {
+        std::getline(std::cin, user_input);
+        boost::trim(user_input);
+        if (std::count(allowed_values.begin(), allowed_values.end(), user_input) > 0)
+            break;
+    }
+    return user_input;
+}
+
 void execute_place_order_command(boost::program_options::variables_map const& variables_map)
 {
     if (variables_map.count("side") == 0)
@@ -59,7 +90,36 @@ void execute_place_order_command(boost::program_options::variables_map const& va
                                     .price = variables_map["price"].as<double>()};
 
     Bitfinex::Client client(config);
-    client.submit_order(order);
+    Bitfinex::OrderResponse order_response = client.submit_order(order);
+    if (order_response.http_status != 200) {
+        std::cerr << "An error occurred, please try again later" << std::endl;
+        exit(1);
+    }
+    if (order_response.message != "SUCCESS") {
+        std::cerr << "Oops ! order didn't go through" << std::endl;
+        exit(2);
+    }
+
+    std::cout << std::format(R"(Placed a {} {} order for pair {} for the price of {} for {} amount)", order_response.type, order_side_to_string(order_response.side), order_response.symbol
+                                , order_response.price, order_response.amount) << std::endl;
+
+    std::cout << "Would you like to change the order price ? (y,n) " << std::endl;
+    if (read_string_from_cli({"yes", "y", "no", "n"})[0] == 'y') {
+        std::cout << "Please enter the new order price:" << std::endl;
+        double new_price = read_positive_double_from_cli();
+        order_response = client.update_order(std::to_string(order_response.order_id), new_price);
+
+        if (order_response.http_status != 200) {
+            std::cerr << "An error occurred, please try again later" << std::endl;
+            exit(1);
+        }
+        if (order_response.message != "SUCCESS") {
+            std::cerr << "Oops ! order didn't go through" << std::endl;
+            exit(2);
+        }
+
+        std::cout << "Successfully changed order price to " << order_response.price << std::endl;
+    }
 }
 
 int main(int argc, char **argv)

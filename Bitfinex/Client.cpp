@@ -68,6 +68,23 @@ OrderResponse Client::update_order(std::string const& order_id, double price)
     return order_response;
 }
 
+TickerResponse Client::get_ticker(std::string const& symbol)
+{
+    const std::string url = "https://api-pub.bitfinex.com";
+    const std::string endpoint = "/v2/ticker/" + symbol;
+    cpr::Response response = cpr::Get(cpr::Url { url + endpoint });
+
+    TickerResponse ticker_response;
+    ticker_response.http_status = response.status_code;
+    if (ticker_response.http_status != 200)
+        return ticker_response;
+    json json_response = json::parse(response.text);
+    ticker_response.bid = json_response[0];
+    ticker_response.last_price = json_response[6];
+    ticker_response.volume = json_response[7];
+    return ticker_response;
+}
+
 void Client::retrieve_orders()
 {
     const std::string endpoint = "/v2/auth/r/wallets";

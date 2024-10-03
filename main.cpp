@@ -122,11 +122,24 @@ void execute_place_order_command(boost::program_options::variables_map const& va
     }
 }
 
+void execute_get_ticker_info_command(std::string const& symbol)
+{
+    Bitfinex::TickerResponse ticker_response = Bitfinex::Client::get_ticker(symbol);
+    if (ticker_response.http_status != 200) {
+        std::cerr << "An error occurred, please try again later" << std::endl;
+        exit(1);
+    }
+    std::cout << "Price of the last trade: " << ticker_response.last_price << std::endl;
+    std::cout << "Price of last highest bid: " << ticker_response.bid << std::endl;
+    std::cout << "Daily volume: " << ticker_response.volume << std::endl;
+}
+
 int main(int argc, char **argv)
 {
     boost::program_options::options_description general_options("Supported general options");
     general_options.add_options()("help", "print help message");
     general_options.add_options()("order", "Place a new order");
+    general_options.add_options()("ticker", boost::program_options::value<std::string>(), "Print information about the given ticker");
 
     boost::program_options::options_description order_options("Supported order options");
     order_options.add_options()("side", new SideValue(nullptr), "Order side [BUY, SELL]");
@@ -149,7 +162,10 @@ int main(int argc, char **argv)
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, all_options), variables_map);
         boost::program_options::notify(variables_map);
 
-        if (variables_map.count("order")) {
+        if (variables_map.count("ticker")) {
+            std::string symbol = variables_map["ticker"].as<std::string>();
+            execute_get_ticker_info_command(symbol);
+        } else if (variables_map.count("order")) {
             dotenv::init(".env");
 
             if (dotenv::getenv("BASE_ENDPOINT").empty()) {

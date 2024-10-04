@@ -55,6 +55,7 @@ public:
     static TickerResponse get_ticker(std::string const&);
     OrderResponse submit_order(Order const&);
     OrderResponse update_order(std::string const& order_id, double price);
+    OrderResponse cancel_order(std::string const&);
     void retrieve_orders();
 private:
     const Config m_config;

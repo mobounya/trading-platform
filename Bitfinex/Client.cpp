@@ -58,13 +58,33 @@ OrderResponse Client::update_order(std::string const& order_id, double price)
     order_response.message = json_response[6];
     if (order_response.message != "SUCCESS")
         return order_response;
-    const double order_amount = json_response[4][0][6];
-    order_response.order_id = json_response[4][0][0];
-    order_response.symbol = json_response[4][0][3];
+    const double order_amount = json_response[4][6];
+    order_response.order_id = json_response[4][0];
+    order_response.symbol = json_response[4][3];
     order_response.amount = (order_amount < 0) ? (order_amount * -1) : order_amount;
     order_response.side = (order_amount < 0) ? OrderSide::SELL : OrderSide::BUY;
-    order_response.type = json_response[4][0][8];
-    order_response.price = json_response[4][0][16];
+    order_response.type = json_response[4][8];
+    order_response.price = json_response[4][16];
+    return order_response;
+}
+
+OrderResponse Client::cancel_order(std::string const& order_id)
+{
+    const std::string endpoint = "/v2/auth/w/order/cancel";
+    const std::string current_timestamp = get_current_timestamp_as_string();
+    const std::string body = std::format(R"({{ "id": {} }})", order_id);
+    const std::string signature = hex_hmac_sha384(this->m_config.SECRET_KEY, "/api" + endpoint + current_timestamp + body);
+
+    cpr::Response response = cpr::Post(cpr::Url { this->m_config.BASE_ENDPOINT + endpoint }, cpr::Body { body }, cpr::Header { { "Content-type", "application/json" }, {"accept", "application/json"}, { "bfx-nonce", current_timestamp },
+                                                                                                                     { "bfx-apikey", this->m_config.API_KEY }, { "bfx-signature", signature } });
+
+    OrderResponse order_response;
+    order_response.http_status = response.status_code;
+    if (order_response.http_status != 200)
+        return order_response;
+    json json_response = json::parse(response.text);
+    order_response.message = json_response[6];
+    order_response.order_id = json_response[4][0];
     return order_response;
 }
 

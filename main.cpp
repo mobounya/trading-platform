@@ -100,8 +100,8 @@ void execute_place_order_command(boost::program_options::variables_map const& va
         exit(2);
     }
 
-    std::cout << std::format(R"(Placed a {} {} order for pair {} for the price of {} for {} amount)", order_response.type, order_side_to_string(order_response.side), order_response.symbol
-                                , order_response.price, order_response.amount) << std::endl;
+    std::cout << std::format(R"(Placed a {} {} order for pair {} for the price of {} for {} amount, order id: ({}))", order_response.type, order_side_to_string(order_response.side), order_response.symbol
+                                , order_response.price, order_response.amount, order_response.order_id) << std::endl;
 
     std::cout << "Would you like to change the order price ? (y,n) " << std::endl;
     if (read_string_from_cli({"yes", "y", "no", "n"})[0] == 'y') {
@@ -113,12 +113,26 @@ void execute_place_order_command(boost::program_options::variables_map const& va
             std::cerr << "An error occurred, please try again later" << std::endl;
             exit(1);
         }
+        if (order_response.message != "SUCCESS")
+            std::cerr << "Oops ! could not update the price" << std::endl;
+        else
+            std::cout << "Successfully changed order price to " << order_response.price << std::endl;
+    }
+
+    std::cout << "Would you like to cancel the order (" << order_response.order_id << ") ? (y,n)" << std::endl;
+    if (read_string_from_cli({"yes", "y", "no", "n"})[0] == 'y') {
+        order_response = client.cancel_order(std::to_string(order_response.order_id));
+
+        if (order_response.http_status != 200) {
+            std::cerr << "An error occurred, please try again later" << std::endl;
+            exit(1);
+        }
         if (order_response.message != "SUCCESS") {
-            std::cerr << "Oops ! order didn't go through" << std::endl;
+            std::cerr << "Oops ! could not cancel order" << std::endl;
             exit(2);
         }
 
-        std::cout << "Successfully changed order price to " << order_response.price << std::endl;
+        std::cout << "Successfully submitted order (" << order_response.order_id << ") for cancellation" << std::endl;
     }
 }
 

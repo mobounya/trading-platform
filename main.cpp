@@ -71,6 +71,21 @@ std::string read_string_from_cli(std::vector<std::string> const &allowed_values)
 
 void execute_place_order_command(boost::program_options::variables_map const& variables_map)
 {
+    dotenv::init(".env");
+
+    if (dotenv::getenv("BASE_ENDPOINT").empty()) {
+        std::cerr << "Please set BASE_ENDPOINT in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("API_KEY").empty()) {
+        std::cerr << "Please set API_KEY in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("SECRET_KEY").empty()) {
+        std::cerr << "Please set SECRET_KEY in the .env file" << std::endl;
+        return;
+    }
+
     if (variables_map.count("side") == 0)
         throw boost::program_options::required_option("side");
     if (variables_map.count("symbol") == 0)
@@ -154,12 +169,48 @@ void execute_get_ticker_info_command(std::string const& symbol)
     std::cout << "Daily volume: " << ticker_response.volume << std::endl;
 }
 
+void execute_cancel_order_command(std::string const& order_id)
+{
+    dotenv::init(".env");
+
+    if (dotenv::getenv("BASE_ENDPOINT").empty()) {
+        std::cerr << "Please set BASE_ENDPOINT in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("API_KEY").empty()) {
+        std::cerr << "Please set API_KEY in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("SECRET_KEY").empty()) {
+        std::cerr << "Please set SECRET_KEY in the .env file" << std::endl;
+        return;
+    }
+
+    Bitfinex::Config config { .BASE_ENDPOINT = dotenv::getenv("BASE_ENDPOINT"), .API_KEY = dotenv::getenv("API_KEY"),
+        .SECRET_KEY = dotenv::getenv("SECRET_KEY") };
+
+    Bitfinex::Client client(config);
+    Bitfinex::OrderResponse order_response = client.cancel_order(order_id);
+
+    if (order_response.http_status != 200) {
+        std::cerr << "An error occurred, please try again later" << std::endl;
+        exit(1);
+    }
+    if (order_response.message != "SUCCESS") {
+        std::cerr << "Oops ! could not cancel order" << std::endl;
+        exit(2);
+    }
+
+    std::cout << "Successfully submitted order (" << order_response.order_id << ") for cancellation" << std::endl;
+}
+
 int main(int argc, char **argv)
 {
     boost::program_options::options_description general_options("Supported general options");
     general_options.add_options()("help", "print help message");
     general_options.add_options()("order", "Place a new order");
     general_options.add_options()("ticker", boost::program_options::value<std::string>(), "Print information about the given ticker");
+    general_options.add_options()("cancel-order", boost::program_options::value<std::string>(), "Cancel order with the given order id");
 
     boost::program_options::options_description order_options("Supported order options");
     order_options.add_options()("side", new SideValue(nullptr), "Order side [BUY, SELL]");
@@ -182,25 +233,13 @@ int main(int argc, char **argv)
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, all_options), variables_map);
         boost::program_options::notify(variables_map);
 
-        if (variables_map.count("ticker")) {
+        if (variables_map.count("cancel-order")) {
+            std::string order_id = variables_map["cancel-order"].as<std::string>();
+            execute_cancel_order_command(order_id);
+        } else if (variables_map.count("ticker")) {
             std::string symbol = variables_map["ticker"].as<std::string>();
             execute_get_ticker_info_command(symbol);
         } else if (variables_map.count("order")) {
-            dotenv::init(".env");
-
-            if (dotenv::getenv("BASE_ENDPOINT").empty()) {
-                std::cerr << "Please set BASE_ENDPOINT in the .env file" << std::endl;
-                return 1;
-            }
-            if (dotenv::getenv("API_KEY").empty()) {
-                std::cerr << "Please set API_KEY in the .env file" << std::endl;
-                return 1;
-            }
-            if (dotenv::getenv("SECRET_KEY").empty()) {
-                std::cerr << "Please set SECRET_KEY in the .env file" << std::endl;
-                return 1;
-            }
-
             execute_place_order_command(variables_map);
         } else
             std::cout << all_options << std::endl;

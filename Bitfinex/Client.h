@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Bitfinex/OrderBook.h>
 #include <Bitfinex/ENUMS.h>
 #include <dotenv/dotenv.h>
 #include <optional>
@@ -33,20 +34,13 @@ struct Order {
     double amount;
     OrderType type;
     double price;
+    std::string creation_date;
 };
 
 struct Config {
     std::string BASE_ENDPOINT;
     std::string API_KEY;
     std::string SECRET_KEY;
-};
-
-class MalFormedOrderException : public std::exception {
-public:
-    MalFormedOrderException(const char *error_message) : m_error_message(error_message) {}
-    [[nodiscard]] const char* what() const noexcept override { return m_error_message; }
-private:
-    const char *m_error_message;
 };
 
 class Client {
@@ -56,12 +50,13 @@ public:
     OrderResponse submit_order(Order const&);
     OrderResponse update_order(std::string const& order_id, double price);
     OrderResponse cancel_order(std::string const&);
-    void retrieve_orders();
+    std::optional<OrderBook> retrieve_orders(std::string const&);
 private:
     const Config m_config;
 };
 
 std::string get_current_timestamp_as_string();
+std::string unix_to_iso_utc(long long milliseconds_unix_time_stamp);
 std::string hex_hmac_sha384(const std::string& key, const std::string& data);
-
+std::ostream& operator<<(std::ostream& cin, Order const&);
 }

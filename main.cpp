@@ -204,6 +204,36 @@ void execute_cancel_order_command(std::string const& order_id)
     std::cout << "Successfully submitted order (" << order_response.order_id << ") for cancellation" << std::endl;
 }
 
+void execute_retrieve_orders(std::string const& symbol)
+{
+    dotenv::init(".env");
+
+    if (dotenv::getenv("BASE_ENDPOINT").empty()) {
+        std::cerr << "Please set BASE_ENDPOINT in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("API_KEY").empty()) {
+        std::cerr << "Please set API_KEY in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("SECRET_KEY").empty()) {
+        std::cerr << "Please set SECRET_KEY in the .env file" << std::endl;
+        return;
+    }
+
+    Bitfinex::Config config { .BASE_ENDPOINT = dotenv::getenv("BASE_ENDPOINT"), .API_KEY = dotenv::getenv("API_KEY"),
+        .SECRET_KEY = dotenv::getenv("SECRET_KEY") };
+
+    Bitfinex::Client client(config);
+    std::optional<Bitfinex::OrderBook> order_book = client.retrieve_orders(symbol);
+    if (!order_book.has_value())
+        std::cerr << "An error occurred, please try again later" << std::endl;
+    else if (order_book.value().empty())
+        std::cout << "Order book is empty" << std::endl;
+    else
+        std::cout << order_book.value();
+}
+
 int main(int argc, char **argv)
 {
     boost::program_options::options_description general_options("Supported general options");
@@ -211,6 +241,7 @@ int main(int argc, char **argv)
     general_options.add_options()("order", "Place a new order");
     general_options.add_options()("ticker", boost::program_options::value<std::string>(), "Print information about the given ticker");
     general_options.add_options()("cancel-order", boost::program_options::value<std::string>(), "Cancel order with the given order id");
+    general_options.add_options()("order-book", boost::program_options::value<std::string>(), "Retrieve order book for given symbol");
 
     boost::program_options::options_description order_options("Supported order options");
     order_options.add_options()("side", new SideValue(nullptr), "Order side [BUY, SELL]");
@@ -233,7 +264,10 @@ int main(int argc, char **argv)
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, all_options), variables_map);
         boost::program_options::notify(variables_map);
 
-        if (variables_map.count("cancel-order")) {
+        if (variables_map.count("order-book")) {
+            std::string symbol = variables_map["order-book"].as<std::string>();
+            execute_retrieve_orders(symbol);
+        } else if (variables_map.count("cancel-order")) {
             std::string order_id = variables_map["cancel-order"].as<std::string>();
             execute_cancel_order_command(order_id);
         } else if (variables_map.count("ticker")) {

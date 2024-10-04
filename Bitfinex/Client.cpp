@@ -105,17 +105,31 @@ TickerResponse Client::get_ticker(std::string const& symbol)
     return ticker_response;
 }
 
-void Client::retrieve_orders()
+std::optional<OrderBook> Client::retrieve_orders(std::string const& symbol)
 {
-    const std::string endpoint = "/v2/auth/r/wallets";
+    const std::string endpoint = "/v2/auth/r/orders/" + symbol;
     const std::string current_timestamp = get_current_timestamp_as_string();
     const std::string signature = hex_hmac_sha384(this->m_config.SECRET_KEY, "/api" + endpoint + current_timestamp);
 
-    cpr::Response r = cpr::Post(cpr::Url { this->m_config.BASE_ENDPOINT + endpoint }, cpr::Body {}, cpr::Header { { "Content-type", "application/json" }, {"accept", "application/json"}, { "bfx-nonce", current_timestamp },
+    cpr::Response response = cpr::Post(cpr::Url { this->m_config.BASE_ENDPOINT + endpoint }, cpr::Body {}, cpr::Header { { "Content-type", "application/json" }, {"accept", "application/json"}, { "bfx-nonce", current_timestamp },
                                             { "bfx-apikey", this->m_config.API_KEY }, { "bfx-signature", signature } });
-
-    std::cout << r.status_code << std::endl;
-    std::cout << r.text << std::endl;
+    if (response.status_code != 200)
+        return {};
+    json json_response = json::parse(response.text);
+    if (json_response.empty())
+        return OrderBook {};
+    OrderBook order_book;
+    std::for_each(json_response.cbegin(), json_response.cend(), [&order_book](json const& order_element) {
+        // Positive means buy, negative means sell
+        double order_amount = order_element[6];
+        order_amount = (order_amount < 0) ? order_amount * -1 : order_amount;
+        OrderSide side = (order_element[6] < 0) ? OrderSide::SELL : OrderSide::BUY;
+        ulong order_id = order_element[0];
+        Order order { .order_id = std::to_string(order_id), .side = side, .symbol = order_element[3], .amount = order_amount,
+                        .type = order_type_from_string(order_element[8]), .price = order_element[16], .creation_date = unix_to_iso_utc(order_element[4]) };
+        order_book.append_order(order);
+    });
+    return order_book;
 }
 
 std::string get_current_timestamp_as_string()
@@ -123,6 +137,32 @@ std::string get_current_timestamp_as_string()
     auto now = std::chrono::system_clock::now();
     auto now_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(now);
     return std::to_string(now_ms.time_since_epoch().count());
+}
+
+std::string unix_to_iso_utc(long long milliseconds_unix_time_stamp)
+{
+    // Convert Unix timestamp from milliseconds to seconds and remaining milliseconds
+    long long seconds = milliseconds_unix_time_stamp / 1000;
+    long long milliseconds = milliseconds_unix_time_stamp % 1000;
+
+    // Convert to time_t
+    std::time_t time = static_cast<time_t>(seconds);
+
+    // Convert to tm struct
+    std::tm* tmUTC = std::gmtime(&time);
+
+    // Create an ostringstream for formatting
+    std::ostringstream oss;
+
+    // Format the time as ISO 8601 UTC
+    oss << std::put_time(tmUTC, "%Y-%m-%dT%H:%M:%S");
+
+    // Always add milliseconds
+    oss << '.' << std::setfill('0') << std::setw(3) << milliseconds;
+
+    oss << 'Z';  // UTC designator
+
+    return oss.str();
 }
 
 // https://www.okx.com/docs-v5/en/#overview-rest-authentication-signature
@@ -174,6 +214,14 @@ std::string hex_hmac_sha384(std::string const& key, std::string const& data)
         ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
 
     return ss.str();
+}
+
+std::ostream& operator<<(std::ostream& cin, Order const& order)
+{
+    cin << "{ order id: " << order.order_id << ", side: " << order_side_to_string(order.side) << ", symbol: "
+        << order.symbol << ", amount: " << order.amount << ", type: " << order_type_to_string(order.type) <<
+        ", price: " << order.price << ", creation date: " << order.creation_date << " }";
+    return cin;
 }
 
 }

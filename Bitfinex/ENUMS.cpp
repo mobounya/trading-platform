@@ -72,18 +72,18 @@ OrderType order_type_from_string(std::string const& str)
     assert(is_valid_order_type(lowercase_str));
 
     if (lowercase_str == "limit") return OrderType::LIMIT;
-    if (lowercase_str == "exchange_limit") return OrderType::EXCHANGE_LIMIT;
+    if (lowercase_str == "exchange limit" || lowercase_str == "exchange_limit") return OrderType::EXCHANGE_LIMIT;
     if (lowercase_str == "market") return OrderType::MARKET;
-    if (lowercase_str == "exchange_market") return OrderType::EXCHANGE_MARKET;
+    if (lowercase_str == "exchange market" || lowercase_str == "exchange_market") return OrderType::EXCHANGE_MARKET;
     if (lowercase_str == "stop") return OrderType::STOP;
-    if (lowercase_str == "exchange_stop") return OrderType::EXCHANGE_STOP;
-    if (lowercase_str == "stop_limit") return OrderType::STOP_LIMIT;
-    if (lowercase_str == "exchange_stop_limit") return OrderType::EXCHANGE_STOP_LIMIT;
-    if (lowercase_str == "trailing_stop") return OrderType::TRAILING_STOP;
-    if (lowercase_str == "exchange_trailing_stop") return OrderType::EXCHANGE_TRAILING_STOP;
-    if (lowercase_str == "fill_or_kill" || lowercase_str == "fok") return OrderType::FILL_OR_KILL;
-    if (lowercase_str == "exchange_fok") return OrderType::EXCHANGE_FOK;
-    if (lowercase_str == "immediate_or_cancel" || lowercase_str == "ioc") return OrderType::IMMEDIATE_OR_CANCEL;
+    if (lowercase_str == "exchange stop" || lowercase_str == "exchange_stop") return OrderType::EXCHANGE_STOP;
+    if (lowercase_str == "stop limit" || lowercase_str == "stop_limit") return OrderType::STOP_LIMIT;
+    if (lowercase_str == "exchange stop limit" || lowercase_str == "exchange_stop_limit") return OrderType::EXCHANGE_STOP_LIMIT;
+    if (lowercase_str == "trailing stop" || lowercase_str == "trailing_stop") return OrderType::TRAILING_STOP;
+    if (lowercase_str == "exchange trailing stop" || lowercase_str == "exchange_trailing_stop") return OrderType::EXCHANGE_TRAILING_STOP;
+    if (lowercase_str == "fill or kill" || lowercase_str == "fill_or_kill" || lowercase_str == "fok") return OrderType::FILL_OR_KILL;
+    if (lowercase_str == "exchange fok" || lowercase_str == "exchange_fok") return OrderType::EXCHANGE_FOK;
+    if (lowercase_str == "immediate or cancel" || lowercase_str == "immediate_or_cancel" || lowercase_str == "ioc") return OrderType::IMMEDIATE_OR_CANCEL;
     else
         return OrderType::EXCHANGE_IOC;
 }

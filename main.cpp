@@ -105,6 +105,12 @@ void execute_place_order_command(boost::program_options::variables_map const& va
 
     std::cout << "Would you like to change the order price ? (y,n) " << std::endl;
     if (read_string_from_cli({"yes", "y", "no", "n"})[0] == 'y') {
+        Bitfinex::TickerResponse ticker = Bitfinex::Client::get_ticker(order_response.symbol);
+        if (ticker.http_status == 200) {
+            double suggested_price = ticker.last_price * order.amount;
+            std::cout << "last trade price for pair " << order.symbol << " for the amount " << order.amount << " is " << suggested_price
+                      << " to make sure the order does not fill offer a much higher/lower price" << std::endl;
+        }
         std::cout << "Please enter the new order price:" << std::endl;
         double new_price = read_positive_double_from_cli();
         order_response = client.update_order(std::to_string(order_response.order_id), new_price);

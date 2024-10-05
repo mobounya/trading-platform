@@ -1,5 +1,8 @@
 # Bitfinex CLI
 
+> [!CAUTION]
+> Please use a paper trading sub-account to avoid any harm to your real funds, learn more about [Paper trading at Bitfinex](https://support.bitfinex.com/hc/en-us/articles/900001525006-Paper-Trading-at-Bitfinex-test-learn-and-simulate-trading-strategies).
+
 This is a simple CLI program that allows you to interact with the [Bitfinex](https://www.bitfinex.com/) API.
 
 ## Features
@@ -29,6 +32,10 @@ brew install nlohmann-json
 We're also using [cpr](https://github.com/libcpr/cpr) as a C++ wrapper around Libcurl, however you don't need to worry about it since it's downloaded automatically in the cmake file through `FetchContent`
 
 ### Build
+> [!NOTE]
+> [cpr](https://github.com/libcpr/cpr) need to compile its own copy of Libcurl that's why the build takes a little bit more than what you'll expect, to avoid this you can just compile and
+> install cpr from source and use the find_package() in cmake.
+
 This project comes with a simple bash script that allows you to easily build or run the program, to build, assuming you're in the project root, run:
 ```bash
 ./trader.sh build
@@ -37,10 +44,14 @@ and to run the program:
 ```bash
 ./trader.sh run
 ```
+You can always get help by running:
+```bash
+./trader.sh help
+```
 ### Demonstration
 * Task: Let's say you want to place a limit order using symbol (tTESTBTC:TESTUSD) to buy 0.1 BTC for USD at a price higher than the best ask.
 
-1- let's get ticker tTESTBTC:TESTUSD
+1- let's get the ticker tTESTBTC:TESTUSD
 ```bash
 ./trader.sh run --ticker="tTESTBTC:TESTUSD"
 ```
@@ -58,12 +69,12 @@ The last highest bid is 62129 for 1 BTC, for 0.1 BTC that's `62129 * 0.1 = 6212.
 ```
 output:
 ```
-Placed a EXCHANGE LIMIT buy order for pair tTESTBTC:TESTUSD for the price of 8000 for 0.09 amount, order id: (order_id)
+Placed a EXCHANGE LIMIT buy order for pair tTESTBTC:TESTUSD for the price of 8000 for 0.1 amount, order id: (order_id)
 Would you like to change the order price ? (y,n)
 ```
 Let's type y:
 ```
-last trade price for pair tTESTBTC:TESTUSD for the amount 0.09 is 5600.97 to make sure the order does not fill offer a much higher/lower price
+last trade price for pair tTESTBTC:TESTUSD for the amount 0.1 is 5600.97 to make sure the order does not fill offer a much higher/lower price
 Please enter the new order price:
 ```
 Let's enter 8500
@@ -73,7 +84,7 @@ Would you like to cancel the order (order_id) ? (y,n)
 ```
 Let's enter no
 
-We successfully placed an order, got the chance to change the price and to cancel if we want to.
+We successfully placed an order, got the chance to change the price and cancel if we want to.
 
 For more information about the supported features, run:
 ```bash

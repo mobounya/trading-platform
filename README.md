@@ -8,6 +8,8 @@ This project is still work in progress, currently we offer the following functio
 - Retrieve a ticker for a given symbol
 - Cancel an order
 - Retrieve order book for a given symbol
+- Increase position
+- Retrieve all open positions
 
 ## How do I build ?
 Before building the project, you will need to install the needded dependencies

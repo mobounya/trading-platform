@@ -122,4 +122,19 @@ std::string order_type_to_string(OrderType type)
     }
 }
 
+bool is_valid_position_side(std::string const& side)
+{
+    std::string lowercase_side = boost::algorithm::to_lower_copy(side);
+    return (lowercase_side == "short" || lowercase_side == "long");
+}
+
+PositionSide position_side_from_string(std::string const& side)
+{
+    assert(is_valid_position_side(side));
+    if (boost::algorithm::to_lower_copy(side) == "short")
+        return PositionSide::SHORT;
+    else
+        return PositionSide::LONG;
+}
+
 }

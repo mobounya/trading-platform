@@ -17,6 +17,11 @@ enum OrderSide : uint8_t {
     SELL
 };
 
+enum PositionSide : uint8_t {
+    SHORT,
+    LONG
+};
+
 enum OrderType : uint8_t {
     LIMIT,
     EXCHANGE_LIMIT,
@@ -45,5 +50,8 @@ std::string order_side_to_string(OrderSide);
 bool is_valid_order_type(std::string const&);
 OrderType order_type_from_string(std::string const&);
 std::string order_type_to_string(OrderType);
+
+bool is_valid_position_side(std::string const&);
+PositionSide position_side_from_string(std::string const&);
 
 }

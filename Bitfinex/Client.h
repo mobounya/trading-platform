@@ -27,6 +27,11 @@ struct OrderResponse {
     double price;
 };
 
+struct IncreasePositionResponse {
+    unsigned short http_status;
+    std::string message;
+};
+
 struct Order {
     std::string order_id;
     OrderSide side;
@@ -51,6 +56,7 @@ public:
     OrderResponse update_order(std::string const& order_id, double price);
     OrderResponse cancel_order(std::string const&);
     std::optional<OrderBook> retrieve_orders(std::string const&);
+    IncreasePositionResponse increase_position(PositionSide, std::string const& symbol, double amount);
 private:
     const Config m_config;
 };

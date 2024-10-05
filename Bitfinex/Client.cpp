@@ -120,8 +120,8 @@ std::optional<OrderBook> Client::retrieve_orders(std::string const& symbol)
         return OrderBook {};
     OrderBook order_book;
     std::for_each(json_response.cbegin(), json_response.cend(), [&order_book](json const& order_element) {
-        // Positive means buy, negative means sell
         double order_amount = order_element[6];
+        // Positive means buy, negative means sell
         order_amount = (order_amount < 0) ? order_amount * -1 : order_amount;
         OrderSide side = (order_element[6] < 0) ? OrderSide::SELL : OrderSide::BUY;
         ulong order_id = order_element[0];
@@ -130,6 +130,27 @@ std::optional<OrderBook> Client::retrieve_orders(std::string const& symbol)
         order_book.append_order(order);
     });
     return order_book;
+}
+
+IncreasePositionResponse Client::increase_position(PositionSide side, std::string const& symbol, double amount)
+{
+    const std::string endpoint = "/v2/auth/w/position/increase";
+    const std::string current_timestamp = get_current_timestamp_as_string();
+    // (positive for long, negative for short)
+    amount = (side == PositionSide::SHORT) ? (amount * -1) : amount;
+    const std::string body = std::format(R"({{ "symbol": "{}", "amount": "{}" }})", symbol, amount);
+    const std::string signature = hex_hmac_sha384(this->m_config.SECRET_KEY, "/api" + endpoint + current_timestamp + body);
+
+    std::cout << body << std::endl;
+    cpr::Response response = cpr::Post(cpr::Url { this->m_config.BASE_ENDPOINT + endpoint }, cpr::Body{ body }, cpr::Header { { "Content-type", "application/json" }, {"accept", "application/json"}, { "bfx-nonce", current_timestamp },
+                                                                                                 { "bfx-apikey", this->m_config.API_KEY }, { "bfx-signature", signature } });
+    IncreasePositionResponse position_response;
+    position_response.http_status = response.status_code;
+    if (position_response.http_status != 200)
+        return position_response;
+    json json_response = json::parse(response.text);
+    position_response.message = json_response[6];
+    return position_response;
 }
 
 std::string get_current_timestamp_as_string()

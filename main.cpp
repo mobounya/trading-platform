@@ -40,6 +40,22 @@ public:
     }
 };
 
+class PositionSide : public boost::program_options::typed_value<std::string>
+{
+public:
+    PositionSide(std::string* store_to) : boost::program_options::typed_value<std::string>(store_to) {}
+
+    virtual void xparse(boost::any& v, const std::vector<std::string>& values) const override
+    {
+        boost::program_options::validators::check_first_occurrence(v);
+        const std::string& side = boost::program_options::validators::get_single_string(values);
+        if (!Bitfinex::is_valid_position_side(side))
+            throw boost::program_options::validation_error(boost::program_options::validation_error::invalid_option_value, "position-side");
+
+        v = boost::any(Bitfinex::position_side_from_string(side));
+    }
+};
+
 double read_positive_double_from_cli()
 {
     std::string user_input;
@@ -234,6 +250,46 @@ void execute_retrieve_orders(std::string const& symbol)
         std::cout << order_book.value();
 }
 
+void execute_increase_position_command(boost::program_options::variables_map const& variables_map)
+{
+    dotenv::init(".env");
+
+    if (dotenv::getenv("BASE_ENDPOINT").empty()) {
+        std::cerr << "Please set BASE_ENDPOINT in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("API_KEY").empty()) {
+        std::cerr << "Please set API_KEY in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("SECRET_KEY").empty()) {
+        std::cerr << "Please set SECRET_KEY in the .env file" << std::endl;
+        return;
+    }
+
+    if (variables_map.count("position-side") == 0)
+        throw boost::program_options::required_option("position-side");
+    if (variables_map.count("position-symbol") == 0)
+        throw boost::program_options::required_option("position-symbol");
+    if (variables_map.count("position-amount") == 0)
+        throw boost::program_options::required_option("position-amount");
+
+    Bitfinex::Config config { .BASE_ENDPOINT = dotenv::getenv("BASE_ENDPOINT"), .API_KEY = dotenv::getenv("API_KEY"),
+        .SECRET_KEY = dotenv::getenv("SECRET_KEY") };
+
+    Bitfinex::Client client(config);
+    Bitfinex::IncreasePositionResponse response = client.increase_position(variables_map["position-side"].as<Bitfinex::PositionSide>(), variables_map["position-symbol"].as<std::string>(), variables_map["position-amount"].as<double>());
+    if (response.http_status != 200) {
+        std::cerr << "An error occurred, please try again later" << std::endl;
+        exit(1);
+    }
+    if (response.message != "SUCCESS") {
+        std::cerr << "Oops ! Could not submit position increase" << std::endl;
+        exit(1);
+    }
+    std::cout << "Successfully submitted position increase" << std::endl;
+}
+
 int main(int argc, char **argv)
 {
     boost::program_options::options_description general_options("Supported general options");
@@ -242,6 +298,7 @@ int main(int argc, char **argv)
     general_options.add_options()("ticker", boost::program_options::value<std::string>(), "Print information about the given ticker");
     general_options.add_options()("cancel-order", boost::program_options::value<std::string>(), "Cancel order with the given order id");
     general_options.add_options()("order-book", boost::program_options::value<std::string>(), "Retrieve order book for given symbol");
+    general_options.add_options()("increase-position", "Create a new position using the funds in your margin wallet");
 
     boost::program_options::options_description order_options("Supported order options");
     order_options.add_options()("side", new SideValue(nullptr), "Order side [BUY, SELL]");
@@ -256,15 +313,25 @@ int main(int argc, char **argv)
             throw boost::program_options::validation_error(boost::program_options::validation_error::invalid_option_value, "price");
     }), "Price of the order");
 
+    boost::program_options::options_description increase_position_options("Supported increase position options");
+    increase_position_options.add_options()("position-side", new PositionSide(nullptr), "Position side (short,long)");
+    increase_position_options.add_options()("position-symbol", boost::program_options::value<std::string>(), "Trading pair on which you wish to open a position");
+    increase_position_options.add_options()("position-amount", boost::program_options::value<double>()->notifier([](double value) {
+        if (value <= 0)
+            throw boost::program_options::validation_error(boost::program_options::validation_error::invalid_option_value, "position-amount");
+    }), "Amount of the position");
+
     boost::program_options::options_description all_options("all options");
-    all_options.add(general_options).add(order_options);
+    all_options.add(general_options).add(order_options).add(increase_position_options);
 
     try {
         boost::program_options::variables_map variables_map;
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, all_options), variables_map);
         boost::program_options::notify(variables_map);
 
-        if (variables_map.count("order-book")) {
+        if (variables_map.count("increase-position")) {
+            execute_increase_position_command(variables_map);
+        } else if (variables_map.count("order-book")) {
             std::string symbol = variables_map["order-book"].as<std::string>();
             execute_retrieve_orders(symbol);
         } else if (variables_map.count("cancel-order")) {

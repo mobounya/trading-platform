@@ -8,7 +8,7 @@ void OrderBook::append_order(Bitfinex::Order const& order)
     m_order_book.push_back(order);
 }
 
-size_t OrderBook::empty() const
+bool OrderBook::empty() const
 {
     return m_order_book.empty();
 }

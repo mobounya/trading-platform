@@ -12,7 +12,7 @@ public:
 
     void append_order(Order const&);
 
-    [[nodiscard]] size_t empty() const;
+    [[nodiscard]] bool empty() const;
     [[nodiscard]] std::vector<Order> const& order_book() const { return m_order_book; }
 private:
     std::vector<Order> m_order_book;

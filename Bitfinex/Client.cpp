@@ -5,6 +5,7 @@
 #include <openssl/evp.h>
 #include <string>
 #include <nlohmann/json.hpp>
+#include <Bitfinex/Positions.h>
 
 using json = nlohmann::json;
 
@@ -141,7 +142,6 @@ IncreasePositionResponse Client::increase_position(PositionSide side, std::strin
     const std::string body = std::format(R"({{ "symbol": "{}", "amount": "{}" }})", symbol, amount);
     const std::string signature = hex_hmac_sha384(this->m_config.SECRET_KEY, "/api" + endpoint + current_timestamp + body);
 
-    std::cout << body << std::endl;
     cpr::Response response = cpr::Post(cpr::Url { this->m_config.BASE_ENDPOINT + endpoint }, cpr::Body{ body }, cpr::Header { { "Content-type", "application/json" }, {"accept", "application/json"}, { "bfx-nonce", current_timestamp },
                                                                                                  { "bfx-apikey", this->m_config.API_KEY }, { "bfx-signature", signature } });
     IncreasePositionResponse position_response;
@@ -151,6 +151,26 @@ IncreasePositionResponse Client::increase_position(PositionSide side, std::strin
     json json_response = json::parse(response.text);
     position_response.message = json_response[6];
     return position_response;
+}
+
+std::optional<Positions> Client::retrieve_positions()
+{
+    const std::string endpoint = "/v2/auth/r/positions";
+    const std::string current_timestamp = get_current_timestamp_as_string();
+    const std::string signature = hex_hmac_sha384(this->m_config.SECRET_KEY, "/api" + endpoint + current_timestamp);
+    cpr::Response response = cpr::Post(cpr::Url { this->m_config.BASE_ENDPOINT + endpoint }, cpr::Header { { "Content-type", "application/json" }, {"accept", "application/json"}, { "bfx-nonce", current_timestamp },
+                                                                                                                     { "bfx-apikey", this->m_config.API_KEY }, { "bfx-signature", signature } });
+    if (response.status_code != 200)
+        return {};
+    Positions positions;
+    json json_response = json::parse(response.text);
+    if (json_response.empty())
+        return positions;
+    std::for_each(json_response.cbegin(), json_response.cend(), [&positions](json json_position) {
+        Position position { .symbol = json_position[0], .status = json_position[1], .amount = json_position[2], .base_price = json_position[3] };
+        positions.append_position(position);
+    });
+    return positions;
 }
 
 std::string get_current_timestamp_as_string()
@@ -242,6 +262,13 @@ std::ostream& operator<<(std::ostream& cin, Order const& order)
     cin << "{ order id: " << order.order_id << ", side: " << order_side_to_string(order.side) << ", symbol: "
         << order.symbol << ", amount: " << order.amount << ", type: " << order_type_to_string(order.type) <<
         ", price: " << order.price << ", creation date: " << order.creation_date << " }";
+    return cin;
+}
+
+std::ostream& operator<<(std::ostream& cin, Position const& position)
+{
+    cin << "{ status: " << position.status << ", symbol: " << position.symbol << ", base price: " << position.base_price
+        << ", amount: " << position.amount << " }";
     return cin;
 }
 

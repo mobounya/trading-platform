@@ -9,6 +9,13 @@
 
 namespace Bitfinex {
 
+struct Position {
+    std::string symbol;
+    std::string status;
+    double amount;
+    double base_price;
+};
+
 struct TickerResponse {
     unsigned short http_status;
     double last_price; // Price of the last trade
@@ -57,6 +64,7 @@ public:
     OrderResponse cancel_order(std::string const&);
     std::optional<OrderBook> retrieve_orders(std::string const&);
     IncreasePositionResponse increase_position(PositionSide, std::string const& symbol, double amount);
+    std::optional<Positions> retrieve_positions();
 private:
     const Config m_config;
 };
@@ -65,4 +73,5 @@ std::string get_current_timestamp_as_string();
 std::string unix_to_iso_utc(long long milliseconds_unix_time_stamp);
 std::string hex_hmac_sha384(const std::string& key, const std::string& data);
 std::ostream& operator<<(std::ostream& cin, Order const&);
+std::ostream& operator<<(std::ostream& cin, Position const&);
 }

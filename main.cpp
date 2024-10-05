@@ -1,5 +1,6 @@
 #include <Bitfinex/Client.h>
 #include <Bitfinex/ENUMS.h>
+#include <Bitfinex/Positions.h>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/program_options.hpp>
 #include <format>
@@ -290,6 +291,37 @@ void execute_increase_position_command(boost::program_options::variables_map con
     std::cout << "Successfully submitted position increase" << std::endl;
 }
 
+void execute_retrieve_positions_command()
+{
+    dotenv::init(".env");
+
+    if (dotenv::getenv("BASE_ENDPOINT").empty()) {
+        std::cerr << "Please set BASE_ENDPOINT in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("API_KEY").empty()) {
+        std::cerr << "Please set API_KEY in the .env file" << std::endl;
+        return;
+    }
+    if (dotenv::getenv("SECRET_KEY").empty()) {
+        std::cerr << "Please set SECRET_KEY in the .env file" << std::endl;
+        return;
+    }
+
+    Bitfinex::Config config { .BASE_ENDPOINT = dotenv::getenv("BASE_ENDPOINT"), .API_KEY = dotenv::getenv("API_KEY"),
+        .SECRET_KEY = dotenv::getenv("SECRET_KEY") };
+
+    Bitfinex::Client client(config);
+    std::optional<Bitfinex::Positions> positions = client.retrieve_positions();
+    if (!positions.has_value()) {
+        std::cerr << "An error occurred, please try again later" << std::endl;
+        exit(1);
+    } else if (positions.value().empty()) {
+        std::cout << "You don't have any open positions" << std::endl;
+    } else
+        std::cout << positions.value();
+}
+
 int main(int argc, char **argv)
 {
     boost::program_options::options_description general_options("Supported general options");
@@ -299,6 +331,7 @@ int main(int argc, char **argv)
     general_options.add_options()("cancel-order", boost::program_options::value<std::string>(), "Cancel order with the given order id");
     general_options.add_options()("order-book", boost::program_options::value<std::string>(), "Retrieve order book for given symbol");
     general_options.add_options()("increase-position", "Create a new position using the funds in your margin wallet");
+    general_options.add_options()("retrieve-positions", "Get active positions");
 
     boost::program_options::options_description order_options("Supported order options");
     order_options.add_options()("side", new SideValue(nullptr), "Order side [BUY, SELL]");
@@ -329,7 +362,9 @@ int main(int argc, char **argv)
         boost::program_options::store(boost::program_options::parse_command_line(argc, argv, all_options), variables_map);
         boost::program_options::notify(variables_map);
 
-        if (variables_map.count("increase-position")) {
+        if (variables_map.count("retrieve-positions")) {
+            execute_retrieve_positions_command();
+        } else if (variables_map.count("increase-position")) {
             execute_increase_position_command(variables_map);
         } else if (variables_map.count("order-book")) {
             std::string symbol = variables_map["order-book"].as<std::string>();

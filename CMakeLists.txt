@@ -20,7 +20,9 @@ add_executable(trader main.cpp
         Bitfinex/ENUMS.cpp
         Bitfinex/OrderBook.h
         Bitfinex/OrderBook.cpp
-        Bitfinex/Forward.h)
+        Bitfinex/Forward.h
+        Bitfinex/Positions.h
+        Bitfinex/Positions.cpp)
 
 target_link_libraries(trader PRIVATE Boost::program_options)
 target_link_libraries(trader PRIVATE cpr::cpr)

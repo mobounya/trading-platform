@@ -2,8 +2,6 @@ cmake_minimum_required(VERSION 3.28)
 set(CMAKE_CXX_STANDARD 20)
 project(trader)
 
-set(nlohmann_json_DIR "/home/linuxbrew/.linuxbrew/Cellar/nlohmann-json/3.11.3/share/cmake/nlohmann_json")
-
 include(FetchContent)
 FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
         GIT_TAG 3b15fa82ea74739b574d705fea44959b58142eb8) # Replace with your desired git commit from: https://github.com/libcpr/cpr/releases

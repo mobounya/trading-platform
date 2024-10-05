@@ -1,7 +1,20 @@
 #!/usr/bin/env bash
 
+ARG0=$0
+
 function get_top_dir() {
     git rev-parse --show-toplevel
+}
+
+function print_help() {
+    NAME=$(basename "$ARG0")
+    cat << EOF
+Usage: $NAME COMMAND
+  Supported COMMANDs:
+    help: Print help
+    build: Compile the project
+    run: Run the program
+EOF
 }
 
 TRADER_SOURCE_DIR=$(get_top_dir)
@@ -33,5 +46,10 @@ if [[ "$CMD" =~ ^(build|run)$ ]]; then
       # FIXME: should run build first to make sure there's a binary to run
       run "${@:2}"
       ;;
-    esac
+    help)
+      print_help
+  esac
+else
+    >&2 echo "Unknown command: $CMD"
+    print_help
 fi

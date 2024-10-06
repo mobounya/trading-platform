@@ -31,7 +31,20 @@ brew install nlohmann-json
 ```
 We're also using [cpr](https://github.com/libcpr/cpr) as a C++ wrapper around Libcurl, however you don't need to worry about it since it's downloaded automatically in the cmake file through `FetchContent`
 
+### .env file
+You will need a .env file at the project root with the following variables:
+```
+BASE_ENDPOINT=
+API_KEY=
+SECRET_KEY=
+```
+To learn how to create your API and SECRET KEY, visit [How to create and revoke a Bitfinex API Key](https://support.bitfinex.com/hc/en-us/articles/115003363429-How-to-create-and-revoke-a-Bitfinex-API-Key)
+
+For BASE_ENDPOINT, see https://docs.bitfinex.com/docs/rest-general
 ### Build
+> [!IMPORTANT]
+> Please make sure you have an .env file with the values assigned before running the build step, as the script will copy the .env file to the `build` directory.
+
 > [!NOTE]
 > [cpr](https://github.com/libcpr/cpr) need to compile its own copy of Libcurl that's why the build takes a little bit more than what you'll expect, to avoid this you can just compile and
 > install cpr from source and use the find_package() in cmake.
@@ -90,14 +103,3 @@ For more information about the supported features, run:
 ```bash
 ./trader.sh run help
 ```
-
-## .env file
-You will need a .env file at the project root with the following variables:
-```
-BASE_ENDPOINT=
-API_KEY=
-SECRET_KEY=
-```
-To learn how to create your API and SECRET KEY, visit [How to create and revoke a Bitfinex API Key](https://support.bitfinex.com/hc/en-us/articles/115003363429-How-to-create-and-revoke-a-Bitfinex-API-Key)
-
-For BASE_ENDPOINT, see https://docs.bitfinex.com/docs/rest-general
